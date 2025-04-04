@@ -29,23 +29,41 @@ def start_honeypot(port=22):
         # Accept a connection
         conn, addr = s.accept()
         print(f"Connection from {addr} accepted.")
+        try: 
+            # Send a fake login banner
+            conn.sendall(b"SSH-2.0-OpenSSH_7.2\r\n")
 
-        # Log the connection attempt
-        logging.info(f"Connection from {addr} accepted.")
+            # Log the connection attempt
+            logging.info(f"Connection from {addr} accepted.")
 
-        # Send a fake login prompt
-        conn.sendall(b"SSH-2.0-OpenSSH_7.2\r\n")
-        conn.sendall(b"root@localhost's password: ")
+            # Send a fake login prompt
+            conn.sendall(b"root@localhost's password: ")
 
-        # Receive the password attempt
-        data = conn.recv(1024)
-        if data:
-            password_attempt = data.decode('utf-8').strip()
-            logging.info(f"Password attempt from {addr}: {password_attempt}")
+            # Receive the password attempt
+            data = conn.recv(1024)
+            if data:
+                password_attempt = data.decode('utf-8').strip()
+                logging.info(f"Password attempt from {addr}: {password_attempt}")
 
-            # Respond with "Password:"
-            conn.sendall(b"Password: ")
+                # Respond with "Password:"
+                conn.sendall(b"Password: ")
+                
+        except Exception as e:
+            (f"Error handling connection from {addr}: {str(e)}")
 
-        # Close the connection
-        conn.close()
-        
+        finally:
+            # Close the connection
+            conn.close()
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description='SSH Honeypot.')
+    parser.add_argument('--port', type=int, default=22, help='Port to listen on (default: 22)')
+    args = parser.parse_args()
+
+    try:
+        start_honeypot(port=args.port)
+    except PermissionError:
+        print(f"Error: Port {args.port} requires root privileges (e.g., sudo). Try a higher port like 2222.")
+    except Exception as e:
+        print(f"Failed to start honeypot: {str(e)}")
